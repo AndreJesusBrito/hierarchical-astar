@@ -25,14 +25,14 @@ impl Problem {
         }
     }
 
-    pub fn children(&self, _state: &State) -> Vec<State> {
+    pub fn children(&self, _state: &State) -> Vec<Rc<State>> {
         vec![]
     }
 }
 
 impl a_star::State for State {}
 impl a_star::Problem<State> for Problem {
-    fn children(&self, state: &State) -> Vec<State> {
+    fn children(&self, state: &State) -> Vec<Rc<State>> {
         self.children(state)
     }
 

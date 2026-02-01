@@ -1,7 +1,8 @@
 use std::fmt::Display;
 use crate::algorithms::{a_star, hierarchical_a_star};
+use std::rc::Rc;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct State(pub i32, pub i32);
 
 impl Display for State {
@@ -10,7 +11,7 @@ impl Display for State {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 struct AbstractState {
     level: u32,
     coords: (i32, i32)
@@ -31,24 +32,24 @@ pub struct Problem {
 impl Problem {
     pub fn create(quadrant_len: i32) -> Result<Self, InvalidProblem> {
 
-        if quadrant_len <= 0 {
+        if quadrant_len <= 2 {
             return Err(InvalidProblem::InvalidLength(quadrant_len))
         }
 
         Ok(Problem {
             quadrant_len,
-            start_state: State (0, 0),
+            start_state: State (1, 1),
         })
     }
 
     fn is_valid_state(&self, state: &State) -> bool {
         return state.0 <= self.quadrant_len
-            && state.0 >= -self.quadrant_len
+            && state.0 >= 1
             && state.1 <= self.quadrant_len
-            && state.1 >= -self.quadrant_len
+            && state.1 >= 1
     }
 
-    pub fn children(&self, state: &State) -> Vec<State> {
+    pub fn children(&self, state: &State) -> Vec<Rc<State>> {
         let steps = [
             ( 0,  1),
             ( 1,  1),
@@ -68,7 +69,8 @@ impl Problem {
                 state.1 + step.1,
             );
             if self.is_valid_state(&new_state) {
-                result.push(new_state);
+                // TODO: make states unique
+                result.push(Rc::new(new_state));
             }
         }
 
@@ -78,7 +80,7 @@ impl Problem {
 
 impl a_star::State for State {}
 impl a_star::Problem<State> for Problem {
-    fn children(&self, state: &State) -> Vec<State> {
+    fn children(&self, state: &State) -> Vec<Rc::<State>> {
         self.children(state)
     }
 
@@ -96,21 +98,54 @@ impl a_star::Problem<State> for Problem {
     }
 
     fn start_state(&self) -> State {
-        State (0, 0)
+        State (1, 1)
     }
 }
 
-struct HierarchicalAbstraction;
-impl hierarchical_a_star::HierarchicalAbstraction for HierarchicalAbstraction {
+pub struct HAProblem {
+    max_abstraction_level: u32,
+    problem: Problem,
+}
+
+impl HAProblem {
+    pub fn create(quadrant_len: i32) -> Result<Self, InvalidProblem> {
+        let problem = Problem::create(quadrant_len)?;
+        let max_abstraction_level = i32::ilog2(quadrant_len + 1);
+        Ok(HAProblem {
+            problem,
+            max_abstraction_level
+        })
+    }
+}
+
+impl hierarchical_a_star::HAProblem<State, AbstractState> for HAProblem {
     fn abstract_original(&self, state: &State) -> AbstractState {
-        state.0
+        AbstractState {
+            level: 1,
+            coords: (
+                (state.0 + 1) / 2,
+                (state.1 + 1) / 2,
+            )
+        }
     }
 
     fn further_abstract(&self, abstract_state: &AbstractState) -> Option<AbstractState> {
-        todo!()
+        if abstract_state.level <= self.max_abstraction_level {
+            Some(
+                AbstractState {
+                    level: abstract_state.level + 1,
+                    coords: (
+                        abstract_state.coords.0 / 2,
+                        abstract_state.coords.1 / 2,
+                    )
+                }
+            )
+        } else {
+            None
+        }
     }
 
-    fn children(&self, abstract_state: &AbstractState, problem: &a_star::Problem) -> Vec<AbstractState> {
+    fn abstract_children(&self, abstract_state: &AbstractState) -> Vec<Rc<AbstractState>> {
         let steps = [
             ( 0,  1),
             ( 1,  1),
@@ -133,23 +168,29 @@ impl hierarchical_a_star::HierarchicalAbstraction for HierarchicalAbstraction {
                 ),
             };
 
-            let x = new_state.coords.0 * new_state.
+            let x = (abstract_state.coords.0 + new_state.coords.0) * (2 as i32).pow(abstract_state.level);
+            let y = (abstract_state.coords.1 + new_state.coords.1) * (2 as i32).pow(abstract_state.level);
 
-            let valid_x = ;
-            let valid_y = false;
+            let valid_x = x >= 1 && x <= self.problem.quadrant_len;
+            let valid_y = y >= 1 && y <= self.problem.quadrant_len;
             if valid_x && valid_y {
-                result.push(new_state);
+                // TODO: make state independent
+                result.push(Rc::new(new_state));
             }
         }
 
         return result
     }
 
-    fn cost(&self, abstract_state: &AbstractState) -> u32 {
+    fn abstract_cost(&self, abstract_state: &AbstractState) -> u32 {
         1
     }
 
-    fn is_goal(&self, abstract_state: &AbstractState) -> bool {
+    fn is_abstract_goal(&self, abstract_state: &AbstractState) -> bool {
         todo!()
+    }
+
+    fn original_problem(&self) -> &impl a_star::Problem<State> {
+        &self.problem
     }
 }

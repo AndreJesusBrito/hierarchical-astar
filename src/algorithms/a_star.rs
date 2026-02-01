@@ -5,7 +5,7 @@ use std::fmt;
 pub trait State: Clone + Eq + Hash + fmt::Debug {}
 
 pub trait Problem<S: State> {
-    fn children(&self, state: &S) -> Vec<S>;
+    fn children(&self, state: &S) -> Vec<Rc<S>>;
     fn is_goal(&self, state: &S) -> bool;
 
     fn cost(&self, state: &S) -> u32;
@@ -14,7 +14,7 @@ pub trait Problem<S: State> {
 }
 
 pub struct Node<S: State> {
-    pub state: S,
+    pub state: Rc<S>,
     pub parent: Option<Rc<Node<S>>>,
     pub cost_from_root: u32,
     pub estimated_total_cost: u32,
@@ -134,7 +134,7 @@ impl<'a, S: State, P: Problem<S>> AStar<'a, S, P> {
 
 pub fn create_first_node<S: State>(state: S, cost_estimation: u32) -> Node<S> {
     Node {
-        state: state,
+        state: Rc::new(state),
         parent: None,
         cost_from_root: 0,
         estimated_total_cost: cost_estimation,
@@ -152,7 +152,7 @@ where
     S: State,
     G: Fn(&S) -> bool,
     C: Fn(&S) -> u32,
-    CD: Fn(&S) -> Vec<S>,
+    CD: Fn(&S) -> Vec<Rc<S>>,
     H: FnMut(&S) -> u32
 {
     while sets.open.len() > 0 {
@@ -175,7 +175,7 @@ where
             let estimated_total_cost = cost_from_root + h;
 
             let child_node = Rc::new(Node {
-                state: child,
+                state: Rc::clone(&child),
                 parent: Some(Rc::clone(&current_node)),
                 cost_from_root,
                 estimated_total_cost,

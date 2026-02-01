@@ -1,7 +1,8 @@
 use std::{cmp, fmt::Display};
 use crate::algorithms::a_star;
+use std::rc::Rc;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone,PartialEq, Eq, Hash, Debug)]
 pub struct State {
     pub missionaries_at_left: i32,
     pub cannibals_at_left: i32,
@@ -44,14 +45,15 @@ impl Problem {
         })
     }
 
-    fn children(&self, state: &State) -> Vec<State> {
+    fn children(&self, state: &State) -> Vec<Rc<State>> {
         let mut result = Vec::new();
 
         let mut apply_action = |action: (i32, i32)| {
             let new_state_option = self.apply_action(state, action);
             match new_state_option {
                 Some(new_state) => {
-                    result.push(new_state)
+                    // TODO: make states unique
+                    result.push(Rc::new(new_state))
                 }
                 None => ()
             };
@@ -171,7 +173,7 @@ pub enum InvalidProblem {
 impl a_star::State for State {}
 impl a_star::Problem<State> for Problem {
 
-    fn children(&self, state: &State) -> Vec<State> {
+    fn children(&self, state: &State) -> Vec<Rc<State>> {
         self.children(state)
     }
 
