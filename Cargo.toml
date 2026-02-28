@@ -1,0 +1,7 @@
+[package]
+name = "hierarchical_astar"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cli_select = "0.1.6"

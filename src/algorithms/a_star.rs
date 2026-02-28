@@ -42,12 +42,20 @@ pub struct AStarSets<S: State> {
 }
 
 impl<S: State> AStarSets<S> {
-    pub fn init(start_state: S, estimated_total_cost: u32) -> Self {
-        let start_node = create_first_node(start_state, estimated_total_cost);
+    pub fn new() -> Self {
         AStarSets {
-            open: vec![Rc::new(start_node)],
+            open: Vec::new(),
             closed: Vec::new(),
         }
+    }
+
+    pub fn create_and_add_first_node(&mut self, start_state: S, estimated_total_cost: u32) {
+        let start_node = create_first_node(start_state, estimated_total_cost);
+        self.add_open_node(start_node);
+    }
+
+    pub fn add_open_node(&mut self, node: Node<S>) {
+        self.open.push(Rc::new(node))
     }
 }
 
@@ -61,7 +69,8 @@ impl<'a, S: State, P: Problem<S>> AStar<'a, S, P> {
     pub fn new(problem: &'a P) -> Self {
         let start_state = problem.start_state();
         let estimated_total_cost = problem.heuristic(&start_state);
-        let sets = AStarSets::init(start_state, estimated_total_cost);
+        let mut sets = AStarSets::new();
+        sets.create_and_add_first_node(start_state, estimated_total_cost);
 
         Self {
             problem,

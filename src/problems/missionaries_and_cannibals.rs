@@ -23,7 +23,6 @@ pub struct Problem {
 }
 
 impl Problem {
-
     pub fn create(total_missionaries: i32, total_cannibals: i32, boat_capacity: i32) -> Result<Problem, InvalidProblem> {
         if total_cannibals > total_missionaries {
             return Err(
@@ -172,7 +171,6 @@ pub enum InvalidProblem {
 
 impl a_star::State for State {}
 impl a_star::Problem<State> for Problem {
-
     fn children(&self, state: &State) -> Vec<Rc<State>> {
         self.children(state)
     }
